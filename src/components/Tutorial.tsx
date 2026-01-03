@@ -1,87 +1,122 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Youtube, ExternalLink } from 'lucide-react';
+import { Play, MessageCircle } from 'lucide-react';
 
 const Tutorial: React.FC = () => {
   const { t, language } = useLanguage();
+  const [activeVideo, setActiveVideo] = useState<number | null>(null);
+
+  // Extract YouTube video ID from URL
+  const getYouTubeId = (url: string) => {
+    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
+    return match ? match[1] : null;
+  };
 
   const tutorials = [
     {
       title: t('tutorialPosting'),
-      url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      videoId: 'dQw4w9WgXcQ', // Replace with actual video ID
       description:
         language === 'id'
-          ? 'Pelajari cara posting jasa akun game dengan mudah'
-          : 'Learn how to post game account services easily'
+          ? 'Cara jasa posting akun game dengan mudah dan cepat'
+          : 'Learn how to post game account services easily and quickly'
     },
     {
       title: t('tutorialSearch'),
-      url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      videoId: 'dQw4w9WgXcQ', // Replace with actual video ID
       description:
         language === 'id'
-          ? 'Cara mencari jasa akun game yang Anda inginkan'
-          : 'How to search for the game account services you want'
+          ? 'Cara jasa cari akun game yang sesuai dengan kebutuhan Anda'
+          : 'How to search for game account services that match your needs'
     },
     {
       title: t('tutorialMarket'),
-      url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      videoId: 'dQw4w9WgXcQ', // Replace with actual video ID
       description:
         language === 'id'
-          ? 'Panduan lengkap jual beli akun melalui market'
-          : 'Complete guide to buying and selling accounts via market'
+          ? 'Panduan lengkap cara jual beli akun melalui marketplace kami'
+          : 'Complete guide to buying and selling accounts via our marketplace'
     }
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black p-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl md:text-5xl font-bold text-center mb-8 bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
-          {t('tutorial')}
-        </h1>
+    <div className="page-container p-4 py-12">
+      <div className="max-w-5xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="section-title">{t('tutorial')}</h1>
+          <p className="text-slate-400 max-w-2xl mx-auto">
+            {language === 'id'
+              ? 'Tonton video tutorial untuk memahami cara menggunakan platform kami dengan mudah'
+              : 'Watch video tutorials to easily understand how to use our platform'}
+          </p>
+        </div>
 
-        <p className="text-center text-gray-400 mb-12">
-          {language === 'id'
-            ? 'Tonton video tutorial untuk memahami cara menggunakan platform kami'
-            : 'Watch video tutorials to understand how to use our platform'}
-        </p>
-
-        <div className="space-y-6">
+        {/* Video Tutorials */}
+        <div className="space-y-8">
           {tutorials.map((tutorial, index) => (
             <div
               key={index}
-              className="bg-gray-800 border border-gray-700 rounded-lg p-6 hover:border-yellow-500 transition-all duration-200 hover:shadow-lg"
+              className="card card-hover overflow-hidden"
             >
-              <div className="flex items-start space-x-4">
-                <div className="bg-red-600 p-3 rounded-lg flex-shrink-0">
-                  <Youtube className="w-8 h-8 text-white" />
+              <div className="md:flex">
+                {/* Video Embed */}
+                <div className="md:w-2/3 relative">
+                  <div className="aspect-video bg-slate-900">
+                    {activeVideo === index ? (
+                      <iframe
+                        src={`https://www.youtube.com/embed/${tutorial.videoId}?autoplay=1&rel=0`}
+                        title={tutorial.title}
+                        className="w-full h-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    ) : (
+                      <div
+                        className="relative w-full h-full cursor-pointer group"
+                        onClick={() => setActiveVideo(index)}
+                      >
+                        <img
+                          src={`https://img.youtube.com/vi/${tutorial.videoId}/maxresdefault.jpg`}
+                          alt={tutorial.title}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = `https://img.youtube.com/vi/${tutorial.videoId}/hqdefault.jpg`;
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/50 transition-colors">
+                          <div className="w-20 h-20 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-cyan-500/25">
+                            <Play className="w-8 h-8 text-white ml-1" fill="white" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-white mb-2">
+
+                {/* Video Info */}
+                <div className="md:w-1/3 p-6 flex flex-col justify-center">
+                  <div className="text-cyan-400 text-sm font-medium mb-2">
+                    Tutorial {index + 1}
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-3">
                     {tutorial.title}
                   </h3>
-                  <p className="text-gray-400 mb-4">{tutorial.description}</p>
-                  <a
-                    href={tutorial.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
-                  >
-                    <span>
-                      {language === 'id' ? 'Tonton Video' : 'Watch Video'}
-                    </span>
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
+                  <p className="text-slate-400 text-sm leading-relaxed">
+                    {tutorial.description}
+                  </p>
                 </div>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="mt-12 bg-gray-800 border border-gray-700 rounded-lg p-6">
-          <h3 className="text-lg font-bold text-yellow-400 mb-3">
+        {/* Help Section */}
+        <div className="mt-12 card p-8 text-center">
+          <h3 className="text-xl font-bold text-white mb-3">
             {language === 'id' ? 'Butuh Bantuan?' : 'Need Help?'}
           </h3>
-          <p className="text-gray-400 mb-4">
+          <p className="text-slate-400 mb-6 max-w-lg mx-auto">
             {language === 'id'
               ? 'Jika Anda masih memiliki pertanyaan, jangan ragu untuk menghubungi admin kami melalui WhatsApp.'
               : "If you still have questions, don't hesitate to contact our admin via WhatsApp."}
@@ -90,9 +125,10 @@ const Tutorial: React.FC = () => {
             href="https://wa.me/6283136224221"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-block bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors"
+            className="inline-flex items-center space-x-2 btn-success"
           >
-            {language === 'id' ? 'Hubungi Admin' : 'Contact Admin'}
+            <MessageCircle className="w-5 h-5" />
+            <span>{language === 'id' ? 'Hubungi Admin' : 'Contact Admin'}</span>
           </a>
         </div>
       </div>

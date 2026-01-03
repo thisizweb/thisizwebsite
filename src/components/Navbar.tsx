@@ -1,151 +1,212 @@
-import React, { useState } from 'react';
-import { Menu, X, Globe, ShieldCheck } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Menu, X, ChevronDown, ShieldCheck } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useLocation, useNavigate } from 'react-router-dom';
 
-interface NavbarProps {
-  onNavigate: (page: string) => void;
-  currentPage: string;
-}
-
-const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
+const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isLangOpen, setIsLangOpen] = useState(false);
+  const langRef = useRef<HTMLDivElement>(null);
   const { language, setLanguage, t } = useLanguage();
   const { user, logout } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const menuItems = [
-    { id: 'home', label: t('home') },
-    { id: 'tutorial', label: t('tutorial') },
-    { id: 'posting', label: t('postingService') },
-    { id: 'search', label: t('searchService') },
-    { id: 'market', label: t('market') }
+    { path: '/home', label: t('home') },
+    { path: '/tutorial', label: t('tutorial') },
+    { path: '/posting-service', label: t('postingService') },
+    { path: '/search-service', label: t('searchService') },
+    { path: '/market', label: t('market') }
   ];
 
   if (user?.is_admin) {
-    menuItems.push({ id: 'admin', label: t('adminValidation') });
+    menuItems.push({ path: '/admin', label: t('adminValidation') });
   }
 
+  // Close language dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (langRef.current && !langRef.current.contains(event.target as Node)) {
+        setIsLangOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const isActive = (path: string) => {
+    return location.pathname === path;
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    setIsMenuOpen(false);
+    navigate('/home');
+  };
+
   return (
-    <nav className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 text-white shadow-lg sticky top-0 z-50">
+    <nav className="bg-slate-900/95 backdrop-blur-md text-white shadow-lg sticky top-0 z-50 border-b border-slate-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center h-16">
+          {/* Logo */}
           <div
-            className="text-2xl font-bold cursor-pointer bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent"
-            onClick={() => onNavigate('home')}
+            className="text-xl font-display font-bold cursor-pointer text-neon-gradient hover:opacity-80 transition-opacity"
+            onClick={() => navigate('/home')}
           >
             THIS IZ STORE
           </div>
 
-          <div className="hidden md:flex space-x-4 items-center">
+          {/* Desktop Menu - Centered */}
+          <div className="hidden md:flex items-center justify-center space-x-1">
             {menuItems.map(item => (
               <button
-                key={item.id}
-                onClick={() => onNavigate(item.id)}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  currentPage === item.id
-                    ? 'bg-yellow-500 text-black'
-                    : 'hover:bg-gray-700'
-                }`}
+                key={item.path}
+                onClick={() => navigate(item.path)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive(item.path)
+                  ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-400 border border-cyan-500/30'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  }`}
               >
                 {item.label}
               </button>
             ))}
+          </div>
 
-            <button
-              onClick={() => setLanguage(language === 'id' ? 'en' : 'id')}
-              className="p-2 hover:bg-gray-700 rounded-md transition-colors"
-              title={language === 'id' ? 'Switch to English' : 'Ganti ke Indonesia'}
-            >
-              <Globe className="w-5 h-5" />
-            </button>
+          {/* Right Section - Language & User */}
+          <div className="hidden md:flex items-center justify-self-end">
+            {/* Language Dropdown */}
+            <div className="relative" ref={langRef}>
+              <button
+                onClick={() => setIsLangOpen(!isLangOpen)}
+                className="flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-200"
+              >
+                <span>{language === 'id' ? '🇮🇩 ID' : '🇺🇸 US'}</span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${isLangOpen ? 'rotate-180' : ''}`} />
+              </button>
 
+              {isLangOpen && (
+                <div className="absolute right-0 mt-2 w-36 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
+                  <button
+                    onClick={() => { setLanguage('id'); setIsLangOpen(false); }}
+                    className={`w-full px-4 py-2.5 text-left text-sm flex items-center space-x-2 transition-colors ${language === 'id' ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-300 hover:bg-slate-700'
+                      }`}
+                  >
+                    <span>🇮🇩</span>
+                    <span>Indonesia</span>
+                  </button>
+                  <button
+                    onClick={() => { setLanguage('en'); setIsLangOpen(false); }}
+                    className={`w-full px-4 py-2.5 text-left text-sm flex items-center space-x-2 transition-colors ${language === 'en' ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-300 hover:bg-slate-700'
+                      }`}
+                  >
+                    <span>🇺🇸</span>
+                    <span>English</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* User Section */}
             {user ? (
-              <div className="flex items-center space-x-2">
-                <span className="text-sm flex items-center">
+              <div className="flex items-center space-x-3 ml-4 pl-4 border-l border-slate-700">
+                <span className="text-sm flex items-center text-slate-300">
                   {user.username}
                   {user.is_admin && (
-                    <ShieldCheck className="w-4 h-4 ml-1 text-yellow-400" title="Admin" />
+                    <ShieldCheck className="w-4 h-4 ml-1 text-cyan-400" />
                   )}
                 </span>
                 <button
-                  onClick={logout}
-                  className="px-3 py-2 bg-red-600 hover:bg-red-700 rounded-md text-sm font-medium transition-colors"
+                  onClick={handleLogout}
+                  className="px-4 py-2 bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 rounded-lg text-sm font-medium transition-all"
                 >
                   {t('logout')}
                 </button>
               </div>
             ) : (
               <button
-                onClick={() => onNavigate('login')}
-                className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded-md text-sm font-medium transition-colors"
+                onClick={() => navigate('/login')}
+                className="ml-4 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg text-sm font-medium hover:from-cyan-400 hover:to-blue-500 transition-all shadow-lg hover:shadow-cyan-500/25"
               >
                 {t('login')}
               </button>
             )}
           </div>
 
+          {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="md:hidden p-2 rounded-md hover:bg-gray-700"
+            className="md:hidden col-start-3 justify-self-end p-2 rounded-lg hover:bg-slate-800 transition-colors"
           >
             {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
       </div>
 
+      {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="md:hidden bg-gray-800 border-t border-gray-700">
-          <div className="px-2 pt-2 pb-3 space-y-1">
+        <div className="md:hidden bg-slate-900 border-t border-slate-800">
+          <div className="px-4 pt-3 pb-4 space-y-2">
             {menuItems.map(item => (
               <button
-                key={item.id}
+                key={item.path}
                 onClick={() => {
-                  onNavigate(item.id);
+                  navigate(item.path);
                   setIsMenuOpen(false);
                 }}
-                className={`block w-full text-left px-3 py-2 rounded-md text-base font-medium ${
-                  currentPage === item.id
-                    ? 'bg-yellow-500 text-black'
-                    : 'hover:bg-gray-700'
-                }`}
+                className={`block w-full text-left px-4 py-3 rounded-lg text-base font-medium transition-all ${isActive(item.path)
+                  ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-400 border border-cyan-500/30'
+                  : 'text-slate-300 hover:bg-slate-800'
+                  }`}
               >
                 {item.label}
               </button>
             ))}
 
-            <button
-              onClick={() => setLanguage(language === 'id' ? 'en' : 'id')}
-              className="w-full text-left px-3 py-2 hover:bg-gray-700 rounded-md flex items-center"
-            >
-              <Globe className="w-5 h-5 mr-2" />
-              {language === 'id' ? 'English' : 'Indonesia'}
-            </button>
+            {/* Mobile Language Selection */}
+            <div className="flex space-x-2 pt-2">
+              <button
+                onClick={() => setLanguage('id')}
+                className={`flex-1 px-4 py-2.5 rounded-lg text-sm flex items-center justify-center space-x-2 transition-colors ${language === 'id' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'bg-slate-800 text-slate-300'
+                  }`}
+              >
+                <span>🇮🇩</span>
+                <span>Indonesia</span>
+              </button>
+              <button
+                onClick={() => setLanguage('en')}
+                className={`flex-1 px-4 py-2.5 rounded-lg text-sm flex items-center justify-center space-x-2 transition-colors ${language === 'en' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'bg-slate-800 text-slate-300'
+                  }`}
+              >
+                <span>🇺🇸</span>
+                <span>English</span>
+              </button>
+            </div>
 
+            {/* Mobile User Section */}
             {user ? (
-              <>
-                <div className="px-3 py-2 text-sm flex items-center">
+              <div className="pt-3 border-t border-slate-800 mt-3">
+                <div className="px-4 py-2 text-sm flex items-center text-slate-300">
                   {user.username}
                   {user.is_admin && (
-                    <ShieldCheck className="w-4 h-4 ml-1 text-yellow-400" title="Admin" />
+                    <ShieldCheck className="w-4 h-4 ml-1 text-cyan-400" />
                   )}
                 </div>
                 <button
-                  onClick={() => {
-                    logout();
-                    setIsMenuOpen(false);
-                  }}
-                  className="w-full text-left px-3 py-2 bg-red-600 hover:bg-red-700 rounded-md font-medium"
+                  onClick={handleLogout}
+                  className="w-full mt-2 px-4 py-3 bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 rounded-lg font-medium transition-all"
                 >
                   {t('logout')}
                 </button>
-              </>
+              </div>
             ) : (
               <button
                 onClick={() => {
-                  onNavigate('login');
+                  navigate('/login');
                   setIsMenuOpen(false);
                 }}
-                className="w-full text-left px-3 py-2 bg-green-600 hover:bg-green-700 rounded-md font-medium"
+                className="w-full mt-3 px-4 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg font-medium hover:from-cyan-400 hover:to-blue-500 transition-all"
               >
                 {t('login')}
               </button>

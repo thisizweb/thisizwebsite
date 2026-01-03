@@ -2,12 +2,10 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import Captcha from './Captcha';
+import { LogIn, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
-interface LoginProps {
-  onNavigate: (page: string) => void;
-}
-
-const Login: React.FC<LoginProps> = ({ onNavigate }) => {
+const Login: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [captchaValid, setCaptchaValid] = useState(false);
@@ -15,7 +13,8 @@ const Login: React.FC<LoginProps> = ({ onNavigate }) => {
   const [loading, setLoading] = useState(false);
 
   const { login } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +28,7 @@ const Login: React.FC<LoginProps> = ({ onNavigate }) => {
     setLoading(true);
     try {
       await login(username, password);
-      onNavigate('home');
+      navigate('/home');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login gagal / Login failed');
     } finally {
@@ -38,71 +37,93 @@ const Login: React.FC<LoginProps> = ({ onNavigate }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center p-4">
-      <div className="bg-gray-800 rounded-lg shadow-2xl p-8 w-full max-w-md border border-gray-700">
-        <h2 className="text-3xl font-bold text-center mb-6 bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
-          {t('login')}
-        </h2>
+    <div className="page-container flex items-center justify-center p-4">
+      {/* Background Effects */}
+      <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 via-transparent to-transparent" />
+      <div className="absolute top-1/3 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-1/3 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
 
-        {error && (
-          <div className="bg-red-500 text-white px-4 py-2 rounded-lg mb-4 text-sm">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1 text-gray-300">
-              {t('username')} / {t('phoneNumber')}
-            </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent bg-gray-700 text-white"
-              required
-            />
+      <div className="relative w-full max-w-md">
+        <div className="card p-8">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="inline-flex p-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 mb-4">
+              <LogIn className="w-8 h-8 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-white">
+              {t('login')}
+            </h2>
+            <p className="text-slate-400 text-sm mt-2">
+              {language === 'id' ? 'Masuk ke akun Anda' : 'Sign in to your account'}
+            </p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1 text-gray-300">
-              {t('password')}
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent bg-gray-700 text-white"
-              required
-            />
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-500/20 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg mb-6 text-sm">
+              {error}
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="input-label">
+                {t('username')} / {t('phoneNumber')}
+              </label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="input"
+                placeholder={language === 'id' ? 'Masukkan username atau nomor HP' : 'Enter username or phone number'}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="input-label">
+                {t('password')}
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input"
+                placeholder="••••••••"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="input-label">
+                {t('captcha')}
+              </label>
+              <Captcha onVerify={setCaptchaValid} />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading || !captchaValid}
+              className="w-full btn-primary flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            >
+              <span>{loading ? 'Loading...' : t('login')}</span>
+              {!loading && <ArrowRight className="w-5 h-5" />}
+            </button>
+          </form>
+
+          {/* Sign Up Link */}
+          <div className="mt-6 text-center">
+            <span className="text-slate-400 text-sm">
+              {language === 'id' ? 'Belum punya akun?' : "Don't have an account?"}{' '}
+            </span>
+            <button
+              onClick={() => navigate('/signup')}
+              className="text-cyan-400 hover:text-cyan-300 font-medium text-sm transition-colors"
+            >
+              {t('signup')}
+            </button>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1 text-gray-300">
-              {t('captcha')}
-            </label>
-            <Captcha onVerify={setCaptchaValid} />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading || !captchaValid}
-            className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-bold py-2 px-4 rounded-lg hover:from-yellow-600 hover:to-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-          >
-            {loading ? 'Loading...' : t('login')}
-          </button>
-        </form>
-
-        <div className="mt-4 text-center text-gray-400">
-          <span className="text-sm">
-            Belum punya akun? Don't have an account?{' '}
-          </span>
-          <button
-            onClick={() => onNavigate('signup')}
-            className="text-yellow-400 hover:text-yellow-300 font-medium"
-          >
-            {t('signup')}
-          </button>
         </div>
       </div>
     </div>

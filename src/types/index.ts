@@ -46,3 +46,16 @@ export interface Translations {
     en: string;
   };
 }
+
+export const GAME_ACCOUNTS = [
+  'All Accounts',
+  'Free Fire',
+  'Mobile Legend',
+  'Efootball',
+  'FC Mobile',
+  'PUBG',
+  'Roblox',
+  'Genshin Impact',
+  'Clash of Clans',
+  'Other'
+];

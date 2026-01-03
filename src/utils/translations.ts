@@ -22,11 +22,11 @@ export const translations: Translations = {
     en: 'Home'
   },
   postingService: {
-    id: 'Posting Jasa',
+    id: 'Jasa Posting',
     en: 'Posting Service'
   },
   searchService: {
-    id: 'Cari Jasa',
+    id: 'Jasa Cari',
     en: 'Search Service'
   },
   market: {
@@ -178,11 +178,11 @@ export const translations: Translations = {
     en: 'Submitted successfully!'
   },
   tutorialPosting: {
-    id: 'Tutorial Cara Akses "Posting Jasa"',
+    id: 'Tutorial Cara Akses "Jasa Posting"',
     en: 'Tutorial How to Access "Posting Service"'
   },
   tutorialSearch: {
-    id: 'Tutorial Cara Akses "Cari Jasa"',
+    id: 'Tutorial Cara Akses "Jasa Cari"',
     en: 'Tutorial How to Access "Search Service"'
   },
   tutorialMarket: {

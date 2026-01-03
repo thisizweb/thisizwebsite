@@ -44,14 +44,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const login = async (username: string, password: string) => {
-    const { data, error } = await supabase
+    // Try login with username first
+    let { data, error } = await supabase
       .from('users')
       .select('*')
       .eq('username', username)
       .maybeSingle();
 
+    // If not found by username, try phone number
+    if (!data) {
+      const result = await supabase
+        .from('users')
+        .select('*')
+        .eq('phone_number', username)
+        .maybeSingle();
+      data = result.data;
+      error = result.error;
+    }
+
     if (error || !data) {
-      throw new Error('Username tidak ditemukan / Username not found');
+      throw new Error('Username/Nomor telepon tidak ditemukan / Username/Phone number not found');
     }
 
     if (data.password_hash !== password) {

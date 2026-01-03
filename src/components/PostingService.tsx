@@ -1,27 +1,43 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { usePopup } from '../contexts/PopupContext';
+import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { generateCode } from '../utils/captcha';
-import { compressImage } from '../utils/imageCompressor';
-import { Upload, X } from 'lucide-react';
+import { compressImage, compressImageToBlob } from '../utils/imageCompressor';
+import { Upload, X, FileText } from 'lucide-react';
 
 const PostingService: React.FC = () => {
   const { t, language } = useLanguage();
+  const { showSuccess, showError, showWarning } = usePopup();
+  const { user } = useAuth();
   const [name, setName] = useState('');
   const [account, setAccount] = useState('');
   const [customAccount, setCustomAccount] = useState('');
   const [code, setCode] = useState('');
   const [phone, setPhone] = useState('');
+  const initialized = useRef(false);
+
+  // Auto-fill user data
+  useEffect(() => {
+    if (user && !initialized.current) {
+      setName(user.username);
+      setPhone(user.phone_number);
+      initialized.current = true;
+    }
+  }, [user]);
   const [price, setPrice] = useState('');
   const [statusType, setStatusType] = useState<'secure' | 'less_secure'>('secure');
   const [images, setImages] = useState<string[]>([]);
+  const [imageBlobs, setImageBlobs] = useState<Blob[]>([]);
   const [additionalSpecs, setAdditionalSpecs] = useState('');
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
 
   const accountOptions = [
     'Free Fire',
     'Mobile Legend',
+    'Efootball',
+    'FC Mobile',
     'PUBG',
     'Roblox',
     'Genshin Impact',
@@ -54,27 +70,38 @@ const PostingService: React.FC = () => {
     if (!files || files.length === 0) return;
 
     if (images.length + files.length > 5) {
-      setMessage(
+      showWarning(
         language === 'id'
-          ? 'Maksimal 5 gambar'
-          : 'Maximum 5 images'
+          ? 'Maksimal 5 gambar yang dapat diupload'
+          : 'Maximum 5 images can be uploaded',
+        language === 'id' ? 'Batas Gambar' : 'Image Limit'
       );
       return;
     }
 
     setLoading(true);
+    setLoading(true);
     try {
-      const compressedImages: string[] = [];
+      const compressedPreviews: string[] = [];
+      const compressedBlobs: Blob[] = [];
+
       for (let i = 0; i < files.length; i++) {
-        const compressed = await compressImage(files[i], 100);
-        compressedImages.push(compressed);
+        // Create preview
+        const preview = await compressImage(files[i], 100);
+        compressedPreviews.push(preview);
+
+        // Create blob for upload
+        const blob = await compressImageToBlob(files[i], 100);
+        compressedBlobs.push(blob);
       }
-      setImages([...images, ...compressedImages]);
+
+      setImages([...images, ...compressedPreviews]);
+      setImageBlobs([...imageBlobs, ...compressedBlobs]);
     } catch (error) {
-      setMessage(
+      showError(
         language === 'id'
-          ? 'Gagal mengupload gambar'
-          : 'Failed to upload images'
+          ? 'Gagal mengupload gambar. Silakan coba lagi.'
+          : 'Failed to upload images. Please try again.'
       );
     } finally {
       setLoading(false);
@@ -83,33 +110,66 @@ const PostingService: React.FC = () => {
 
   const removeImage = (index: number) => {
     setImages(images.filter((_, i) => i !== index));
+    setImageBlobs(imageBlobs.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMessage('');
 
     if (!name || (!account && !customAccount) || !phone || !price) {
-      setMessage(
+      showWarning(
         language === 'id'
-          ? 'Mohon lengkapi semua field yang wajib'
-          : 'Please fill in all required fields'
+          ? 'Mohon lengkapi semua field yang wajib diisi'
+          : 'Please fill in all required fields',
+        language === 'id' ? 'Data Belum Lengkap' : 'Incomplete Data'
+      );
+      return;
+    }
+
+    if (images.length === 0) {
+      showWarning(
+        language === 'id'
+          ? 'Mohon upload minimal 1 gambar'
+          : 'Please upload at least 1 image',
+        language === 'id' ? 'Gambar Wajib' : 'Image Required'
       );
       return;
     }
 
     const priceNum = parseInt(price);
     if (priceNum < 10000) {
-      setMessage(
+      showWarning(
         language === 'id'
           ? 'Harga minimal Rp. 10.000'
-          : 'Minimum price is Rp. 10,000'
+          : 'Minimum price is Rp. 10,000',
+        language === 'id' ? 'Harga Terlalu Rendah' : 'Price Too Low'
       );
       return;
     }
 
     setLoading(true);
     try {
+      // 1. Upload images to Supabase Storage
+      const uploadedUrls: string[] = [];
+
+      for (const blob of imageBlobs) {
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
+        const { error: uploadError } = await supabase.storage
+          .from('acc-images')
+          .upload(fileName, blob, {
+            contentType: blob.type
+          });
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('acc-images')
+          .getPublicUrl(fileName);
+
+        uploadedUrls.push(publicUrl);
+      }
+
+      // 2. Insert data with public URLs
       const { error } = await supabase.from('posting_services').insert([
         {
           code,
@@ -118,28 +178,36 @@ const PostingService: React.FC = () => {
           phone,
           price: priceNum,
           status_type: statusType,
-          images,
+          images: uploadedUrls,
           additional_specs: additionalSpecs,
-          status: 'pending'
+          status: 'pending',
+          user_id: user?.id
         }
       ]);
 
       if (error) throw error;
 
-      setMessage(t('submittedSuccess') + ' ' + t('awaitingValidation'));
+      showSuccess(
+        language === 'id'
+          ? 'Posting berhasil dikirim! Menunggu validasi admin.'
+          : 'Posting submitted successfully! Awaiting admin validation.',
+        language === 'id' ? 'Berhasil!' : 'Success!'
+      );
       setName('');
       setAccount('');
       setCustomAccount('');
       setPhone('');
       setPrice('');
       setImages([]);
+      setImageBlobs([]);
       setAdditionalSpecs('');
       setCode('');
     } catch (error) {
-      setMessage(
+      console.error('Submission Error:', error);
+      showError(
         language === 'id'
-          ? 'Gagal mengirim posting'
-          : 'Failed to submit posting'
+          ? 'Gagal mengirim posting. Silakan coba lagi.'
+          : 'Failed to submit posting. Please try again.'
       );
     } finally {
       setLoading(false);
@@ -147,49 +215,46 @@ const PostingService: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black p-4 py-8">
-      <div className="max-w-3xl mx-auto">
-        <h1 className="text-4xl md:text-5xl font-bold text-center mb-8 bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
-          {t('postingService')}
-        </h1>
-
-        {message && (
-          <div
-            className={`mb-4 px-4 py-3 rounded-lg ${
-              message.includes('Berhasil') || message.includes('success')
-                ? 'bg-green-500'
-                : 'bg-red-500'
-            } text-white`}
-          >
-            {message}
+    <div className="page-container p-4 py-12">
+      <div className="max-w-2xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-10">
+          <div className="inline-flex p-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 mb-4">
+            <FileText className="w-8 h-8 text-white" />
           </div>
-        )}
+          <h1 className="section-title">{t('postingService')}</h1>
+          <p className="text-slate-400">
+            {language === 'id'
+              ? 'Posting akun game Anda untuk dijual'
+              : 'Post your game account for sale'}
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="bg-gray-800 border border-gray-700 rounded-lg p-6 space-y-4">
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="card p-6 md:p-8 space-y-6">
+          {/* Name */}
           <div>
-            <label className="block text-sm font-medium mb-1 text-gray-300">
-              {t('name')} *
-            </label>
+            <label className="input-label">{t('name')} *</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent bg-gray-700 text-white"
+              className="input"
+              placeholder={language === 'id' ? 'Masukkan nama Anda' : 'Enter your name'}
               required
             />
           </div>
 
+          {/* Account */}
           <div>
-            <label className="block text-sm font-medium mb-1 text-gray-300">
-              {t('account')} *
-            </label>
+            <label className="input-label">{t('account')} *</label>
             <select
               value={account}
               onChange={(e) => {
                 setAccount(e.target.value);
                 if (e.target.value !== 'Other') setCustomAccount('');
               }}
-              className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent bg-gray-700 text-white"
+              className="input"
             >
               <option value="">
                 {language === 'id' ? 'Pilih akun' : 'Select account'}
@@ -206,60 +271,62 @@ const PostingService: React.FC = () => {
                 value={customAccount}
                 onChange={(e) => setCustomAccount(e.target.value)}
                 placeholder={language === 'id' ? 'Masukkan nama akun' : 'Enter account name'}
-                className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent bg-gray-700 text-white mt-2"
+                className="input mt-3"
               />
             )}
           </div>
 
-          {code && (
-            <div>
-              <label className="block text-sm font-medium mb-1 text-gray-300">
-                {t('code')} ({language === 'id' ? 'Otomatis' : 'Automatic'})
-              </label>
-              <input
-                type="text"
-                value={code}
-                readOnly
-                className="w-full px-3 py-2 border border-gray-600 rounded-lg bg-gray-600 text-white font-bold"
-              />
-            </div>
-          )}
-
+          {/* Code */}
           <div>
-            <label className="block text-sm font-medium mb-1 text-gray-300">
-              {t('phoneNumber')} *
+            <label className="input-label">
+              {t('code')} ({language === 'id' ? 'Otomatis' : 'Automatic'})
             </label>
+            <input
+              type="text"
+              value={code}
+              readOnly
+              placeholder={language === 'id' ? 'Akan digenerate otomatis' : 'Will be auto-generated'}
+              className="input bg-slate-900 text-cyan-400 font-mono font-bold"
+            />
+          </div>
+
+          {/* Phone */}
+          <div>
+            <label className="input-label">{t('phoneNumber')} *</label>
             <input
               type="text"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="0812345678"
-              className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent bg-gray-700 text-white"
+              placeholder="08123456789"
+              className="input"
               required
             />
           </div>
 
+          {/* Price */}
           <div>
-            <label className="block text-sm font-medium mb-1 text-gray-300">
-              {t('price')} (Rp) *
-            </label>
+            <label className="input-label">{t('price')} (Rp) *</label>
             <input
               type="number"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               min="10000"
               placeholder="10000"
-              className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent bg-gray-700 text-white"
+              className="input"
               required
             />
           </div>
 
+          {/* Account Status */}
           <div>
-            <label className="block text-sm font-medium mb-2 text-gray-300">
-              {t('accountStatus')} *
-            </label>
-            <div className="space-y-2">
-              <label className="flex items-start space-x-3 cursor-pointer">
+            <label className="input-label">{t('accountStatus')} *</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <label
+                className={`flex items-start space-x-3 p-4 rounded-lg cursor-pointer border transition-all ${statusType === 'secure'
+                  ? 'bg-emerald-500/10 border-emerald-500/50'
+                  : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
+                  }`}
+              >
                 <input
                   type="radio"
                   value="secure"
@@ -267,9 +334,16 @@ const PostingService: React.FC = () => {
                   onChange={(e) => setStatusType(e.target.value as 'secure')}
                   className="mt-1"
                 />
-                <span className="text-gray-300">{t('secureData')}</span>
+                <span className={`text-sm ${statusType === 'secure' ? 'text-emerald-400' : 'text-slate-300'}`}>
+                  {t('secureData')}
+                </span>
               </label>
-              <label className="flex items-start space-x-3 cursor-pointer">
+              <label
+                className={`flex items-start space-x-3 p-4 rounded-lg cursor-pointer border transition-all ${statusType === 'less_secure'
+                  ? 'bg-amber-500/10 border-amber-500/50'
+                  : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
+                  }`}
+              >
                 <input
                   type="radio"
                   value="less_secure"
@@ -277,16 +351,19 @@ const PostingService: React.FC = () => {
                   onChange={(e) => setStatusType(e.target.value as 'less_secure')}
                   className="mt-1"
                 />
-                <span className="text-gray-300">{t('lessSecureData')}</span>
+                <span className={`text-sm ${statusType === 'less_secure' ? 'text-amber-400' : 'text-slate-300'}`}>
+                  {t('lessSecureData')}
+                </span>
               </label>
             </div>
           </div>
 
+          {/* Images */}
           <div>
-            <label className="block text-sm font-medium mb-1 text-gray-300">
-              {t('uploadImages')} ({t('maxImages')})
+            <label className="input-label">
+              {t('uploadImages')} ({t('maxImages')}) *
             </label>
-            <div className="border-2 border-dashed border-gray-600 rounded-lg p-4 text-center">
+            <div className="border-2 border-dashed border-slate-600 rounded-xl p-6 text-center hover:border-cyan-500/50 transition-colors">
               <input
                 type="file"
                 accept="image/*"
@@ -298,12 +375,13 @@ const PostingService: React.FC = () => {
               />
               <label
                 htmlFor="image-upload"
-                className={`cursor-pointer flex flex-col items-center ${
-                  images.length >= 5 ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
+                className={`cursor-pointer flex flex-col items-center ${images.length >= 5 ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
               >
-                <Upload className="w-12 h-12 text-gray-400 mb-2" />
-                <span className="text-gray-400">
+                <div className="p-3 rounded-full bg-slate-800 mb-3">
+                  <Upload className="w-8 h-8 text-slate-400" />
+                </div>
+                <span className="text-slate-400 text-sm">
                   {language === 'id'
                     ? 'Klik untuk upload gambar'
                     : 'Click to upload images'}
@@ -312,20 +390,20 @@ const PostingService: React.FC = () => {
             </div>
 
             {images.length > 0 && (
-              <div className="grid grid-cols-3 gap-2 mt-4">
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mt-4">
                 {images.map((img, index) => (
-                  <div key={index} className="relative group">
+                  <div key={index} className="relative group aspect-square">
                     <img
                       src={img}
                       alt={`Upload ${index + 1}`}
-                      className="w-full h-24 object-cover rounded-lg"
+                      className="w-full h-full object-cover rounded-lg"
                     />
                     <button
                       type="button"
                       onClick={() => removeImage(index)}
-                      className="absolute top-1 right-1 bg-red-600 hover:bg-red-700 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute top-1 right-1 p-1 bg-red-600 hover:bg-red-700 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="w-3 h-3" />
                     </button>
                   </div>
                 ))}
@@ -333,22 +411,23 @@ const PostingService: React.FC = () => {
             )}
           </div>
 
+          {/* Additional Specs */}
           <div>
-            <label className="block text-sm font-medium mb-1 text-gray-300">
-              {t('additionalSpecs')}
-            </label>
+            <label className="input-label">{t('additionalSpecs')}</label>
             <textarea
               value={additionalSpecs}
               onChange={(e) => setAdditionalSpecs(e.target.value)}
               rows={4}
-              className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent bg-gray-700 text-white"
+              className="input resize-none"
+              placeholder={language === 'id' ? 'Tambahkan spesifikasi tambahan (opsional)' : 'Add additional specifications (optional)'}
             />
           </div>
 
+          {/* Submit */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-bold py-3 px-4 rounded-lg hover:from-yellow-600 hover:to-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
             {loading ? 'Loading...' : t('submit')}
           </button>
