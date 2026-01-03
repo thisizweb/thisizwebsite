@@ -7,15 +7,12 @@ const Tutorial: React.FC = () => {
   const [activeVideo, setActiveVideo] = useState<number | null>(null);
 
   // Extract YouTube video ID from URL
-  const getYouTubeId = (url: string) => {
-    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
-    return match ? match[1] : null;
-  };
+
 
   const tutorials = [
     {
       title: t('tutorialPosting'),
-      videoId: 'dQw4w9WgXcQ', // Replace with actual video ID
+      videoId: 'O9IVBvp1ZzM', // Jasa Posting
       description:
         language === 'id'
           ? 'Cara jasa posting akun game dengan mudah dan cepat'
@@ -23,7 +20,7 @@ const Tutorial: React.FC = () => {
     },
     {
       title: t('tutorialSearch'),
-      videoId: 'dQw4w9WgXcQ', // Replace with actual video ID
+      videoId: 'M_OSv-ZCh3k', // Jasa Cari
       description:
         language === 'id'
           ? 'Cara jasa cari akun game yang sesuai dengan kebutuhan Anda'
@@ -31,7 +28,7 @@ const Tutorial: React.FC = () => {
     },
     {
       title: t('tutorialMarket'),
-      videoId: 'dQw4w9WgXcQ', // Replace with actual video ID
+      videoId: 'q8-lB1-4fGA', // Market
       description:
         language === 'id'
           ? 'Panduan lengkap cara jual beli akun melalui marketplace kami'

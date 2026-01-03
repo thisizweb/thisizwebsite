@@ -201,6 +201,10 @@ export const translations: Translations = {
     id: 'Hanya untuk admin',
     en: 'Admin only'
   },
+  other: {
+    id: 'Lainnya',
+    en: 'Other'
+  },
   language: {
     id: 'id',
     en: 'en'

@@ -146,7 +146,7 @@ const Navbar: React.FC = () => {
 
       {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="md:hidden bg-slate-900 border-t border-slate-800">
+        <div className="absolute top-16 left-0 w-full md:hidden bg-slate-900 border-b border-slate-800 shadow-xl z-50">
           <div className="px-4 pt-3 pb-4 space-y-2">
             {menuItems.map(item => (
               <button

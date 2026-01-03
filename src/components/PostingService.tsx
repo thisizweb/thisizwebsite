@@ -261,7 +261,7 @@ const PostingService: React.FC = () => {
               </option>
               {accountOptions.map(option => (
                 <option key={option} value={option}>
-                  {option}
+                  {option === 'Other' ? t('other') : option}
                 </option>
               ))}
             </select>
@@ -307,11 +307,15 @@ const PostingService: React.FC = () => {
           <div>
             <label className="input-label">{t('price')} (Rp) *</label>
             <input
-              type="number"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              min="10000"
-              placeholder="10000"
+              type="text"
+              value={price.replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ".")}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\./g, "");
+                if (!isNaN(Number(value))) {
+                  setPrice(value);
+                }
+              }}
+              placeholder="10.000"
               className="input"
               required
             />

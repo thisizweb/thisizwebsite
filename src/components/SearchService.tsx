@@ -202,7 +202,7 @@ const SearchService: React.FC = () => {
               </option>
               {accountOptions.map(option => (
                 <option key={option} value={option}>
-                  {option}
+                  {option === 'Other' ? t('other') : option}
                 </option>
               ))}
             </select>
@@ -249,19 +249,27 @@ const SearchService: React.FC = () => {
             <label className="input-label">{t('priceRange')} (Rp) *</label>
             <div className="grid grid-cols-2 gap-4">
               <input
-                type="number"
-                value={priceMin}
-                onChange={(e) => setPriceMin(e.target.value)}
-                min="10000"
+                type="text"
+                value={priceMin.replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ".")}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\./g, "");
+                  if (!isNaN(Number(value))) {
+                    setPriceMin(value);
+                  }
+                }}
                 placeholder={language === 'id' ? 'Harga Min' : 'Min Price'}
                 className="input"
                 required
               />
               <input
-                type="number"
-                value={priceMax}
-                onChange={(e) => setPriceMax(e.target.value)}
-                min={priceMin || '10000'}
+                type="text"
+                value={priceMax.replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ".")}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\./g, "");
+                  if (!isNaN(Number(value))) {
+                    setPriceMax(value);
+                  }
+                }}
                 placeholder={language === 'id' ? 'Harga Max' : 'Max Price'}
                 className="input"
                 required

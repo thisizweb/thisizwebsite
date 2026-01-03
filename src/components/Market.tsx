@@ -158,7 +158,7 @@ const Market: React.FC = () => {
             >
               {GAME_ACCOUNTS.map(account => (
                 <option key={account} value={account} className="bg-slate-800">
-                  {account}
+                  {account === 'Other' ? t('other') : account}
                 </option>
               ))}
             </select>

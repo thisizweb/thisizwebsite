@@ -14,7 +14,9 @@ const Home: React.FC = () => {
       description: language === 'id'
         ? 'Harga terjangkau untuk semua kalangan'
         : 'Affordable prices for everyone',
-      color: 'from-cyan-500 to-blue-500'
+      color: 'from-cyan-500 to-blue-500',
+      link: '/market',
+      type: 'internal'
     },
     {
       icon: Shield,
@@ -22,7 +24,9 @@ const Home: React.FC = () => {
       description: language === 'id'
         ? 'Transaksi dijamin aman dan terpercaya'
         : 'Guaranteed safe and trusted transactions',
-      color: 'from-emerald-500 to-teal-500'
+      color: 'from-emerald-500 to-teal-500',
+      link: 'https://www.instagram.com/p/CiB4xHOuNkr/?igsh=eGZpbzkxM2Fnc3c3',
+      type: 'external'
     },
     {
       icon: Users,
@@ -30,7 +34,9 @@ const Home: React.FC = () => {
       description: language === 'id'
         ? 'Dipercaya oleh ribuan pengguna'
         : 'Trusted by thousands of users',
-      color: 'from-purple-500 to-pink-500'
+      color: 'from-purple-500 to-pink-500',
+      link: 'https://www.instagram.com/reel/ClIBjbZuNL7/?igsh=MXJ6Nm9zYnB1ZTN6Mw==',
+      type: 'external'
     }
   ];
 
@@ -78,24 +84,43 @@ const Home: React.FC = () => {
       </div>
 
       {/* Features Section */}
-      <div className="max-w-6xl mx-auto px-4 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {features.map((feature, index) => (
-            <div
-              key={index}
-              className="group card card-hover p-8 text-center"
-            >
-              <div className={`inline-flex p-4 rounded-2xl bg-gradient-to-br ${feature.color} mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                <feature.icon className="w-8 h-8 text-white" />
+      <div className="max-w-6xl mx-auto px-2 md:px-4 py-8 md:py-16">
+        <div className="grid grid-cols-3 gap-2 md:gap-6">
+          {features.map((feature, index) => {
+            const CardContent = () => (
+              <div className="group card card-hover p-2 md:p-8 text-center h-full flex flex-col items-center justify-center">
+                <div className={`inline-flex p-2 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-br ${feature.color} mb-2 md:mb-6 group-hover:scale-110 transition-transform duration-300`}>
+                  <feature.icon className="w-4 h-4 md:w-8 md:h-8 text-white" />
+                </div>
+                <h3 className="text-[10px] md:text-xl font-bold text-white mb-1 md:mb-3 leading-tight">
+                  {feature.title}
+                </h3>
+                <p className="text-[9px] md:text-base text-slate-400 leading-tight md:leading-relaxed">
+                  {feature.description}
+                </p>
               </div>
-              <h3 className="text-xl font-bold text-white mb-3">
-                {feature.title}
-              </h3>
-              <p className="text-slate-400 leading-relaxed">
-                {feature.description}
-              </p>
-            </div>
-          ))}
+            );
+
+            return feature.type === 'internal' ? (
+              <div
+                key={index}
+                onClick={() => navigate(feature.link)}
+                className="cursor-pointer block h-full"
+              >
+                <CardContent />
+              </div>
+            ) : (
+              <a
+                key={index}
+                href={feature.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block h-full"
+              >
+                <CardContent />
+              </a>
+            );
+          })}
         </div>
       </div>
 
